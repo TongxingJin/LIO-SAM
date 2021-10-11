@@ -247,6 +247,7 @@ public:
         systemInitialized = false;
     }
 
+    // 订阅激光里程计
     void odometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
     {
         std::lock_guard<std::mutex> lock(mtx);
@@ -351,7 +352,7 @@ public:
             // pop and integrate imu data that is between two optimizations
             sensor_msgs::Imu *thisImu = &imuQueOpt.front();
             double imuTime = ROS_TIME(thisImu);
-            if (imuTime < currentCorrectionTime - delta_t)
+            if (imuTime < currentCorrectionTime - delta_t)// 激光里程计时间戳之前的imu
             {
                 double dt = (lastImuT_opt < 0) ? (1.0 / 500.0) : (imuTime - lastImuT_opt);
                 imuIntegratorOpt_->integrateMeasurement(
@@ -359,7 +360,7 @@ public:
                         gtsam::Vector3(thisImu->angular_velocity.x,    thisImu->angular_velocity.y,    thisImu->angular_velocity.z), dt);
                 
                 lastImuT_opt = imuTime;
-                imuQueOpt.pop_front();
+                imuQueOpt.pop_front();// 积分，同时pop掉，后面不会再用了
             }
             else
                 break;
@@ -387,7 +388,7 @@ public:
         graphValues.clear();
         // Overwrite the beginning of the preintegration for the next step.
         gtsam::Values result = optimizer.calculateEstimate();
-        prevPose_  = result.at<gtsam::Pose3>(X(key));
+        prevPose_  = result.at<gtsam::Pose3>(X(key));// 优化后的当前状态
         prevVel_   = result.at<gtsam::Vector3>(V(key));
         prevState_ = gtsam::NavState(prevPose_, prevVel_);
         prevBias_  = result.at<gtsam::imuBias::ConstantBias>(B(key));
@@ -402,20 +403,20 @@ public:
 
 
         // 2. after optiization, re-propagate imu odometry preintegration
-        prevStateOdom = prevState_;
+        prevStateOdom = prevState_;// 更新imu里程计更优的位姿，重新做积分？
         prevBiasOdom  = prevBias_;
         // first pop imu message older than current correction data
         double lastImuQT = -1;
         while (!imuQueImu.empty() && ROS_TIME(&imuQueImu.front()) < currentCorrectionTime - delta_t)
         {
             lastImuQT = ROS_TIME(&imuQueImu.front());
-            imuQueImu.pop_front();
+            imuQueImu.pop_front();// 只在这里做pop
         }
         // repropogate
         if (!imuQueImu.empty())
         {
             // reset bias use the newly optimized bias
-            imuIntegratorImu_->resetIntegrationAndSetBias(prevBiasOdom);
+            imuIntegratorImu_->resetIntegrationAndSetBias(prevBiasOdom);// 也替换了更新的bias
             // integrate imu message from the beginning of this optimization
             for (int i = 0; i < (int)imuQueImu.size(); ++i)
             {
@@ -453,6 +454,7 @@ public:
         return false;
     }
 
+    // imu预积分，累积位姿
     void imuHandler(const sensor_msgs::Imu::ConstPtr& imu_raw)
     {
         std::lock_guard<std::mutex> lock(mtx);
@@ -474,7 +476,7 @@ public:
                                                 gtsam::Vector3(thisImu.angular_velocity.x,    thisImu.angular_velocity.y,    thisImu.angular_velocity.z), dt);
 
         // predict odometry
-        gtsam::NavState currentState = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
+        gtsam::NavState currentState = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);// 从优化位姿处进行积分
 
         // publish odometry
         nav_msgs::Odometry odometry;

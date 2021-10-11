@@ -24,6 +24,10 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenMP REQUIRED)
 find_package(PCL REQUIRED QUIET)
 find_package(OpenCV REQUIRED QUIET)
+set(GTSAM_DIR /home/jin/Documents/tojintongxin/gears/x86_64/lib/cmake/GTSAM)
+# set(GTSAM_INCLUDE_DIR ${GTSAM_DIR}/include/)
+# include_directories(${GTSAM_INCLUDE_DIR})
+# set(GTSAM_LIBRARIES gtsam gtsam_unstable)
 find_package(GTSAM REQUIRED QUIET)
 
 add_message_files(

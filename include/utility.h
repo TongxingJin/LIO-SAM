@@ -150,6 +150,7 @@ public:
     float globalMapVisualizationPoseDensity;
     float globalMapVisualizationLeafSize;
 
+    // 从参数服务器获取参数
     ParamServer()
     {
         nh.param<std::string>("/robot_id", robot_id, "roboat");
@@ -201,10 +202,10 @@ public:
         nh.param<float>("lio_sam/imuGyrBiasN", imuGyrBiasN, 0.00003);
         nh.param<float>("lio_sam/imuGravity", imuGravity, 9.80511);
         nh.param<float>("lio_sam/imuRPYWeight", imuRPYWeight, 0.01);
-        nh.param<vector<double>>("lio_sam/extrinsicRot", extRotV, vector<double>());
+        nh.param<vector<double>>("lio_sam/extrinsicRot", extRotV, vector<double>());// TODO:还可以直接获取数组！
         nh.param<vector<double>>("lio_sam/extrinsicRPY", extRPYV, vector<double>());
         nh.param<vector<double>>("lio_sam/extrinsicTrans", extTransV, vector<double>());
-        extRot = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRotV.data(), 3, 3);
+        extRot = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRotV.data(), 3, 3);// 数组赋值给eigen
         extRPY = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRPYV.data(), 3, 3);
         extTrans = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extTransV.data(), 3, 1);
         extQRPY = Eigen::Quaterniond(extRPY);
@@ -244,6 +245,7 @@ public:
         usleep(100);
     }
 
+    // 在imu和lidar中心重合的情况下，将imu的输出转到lidar坐标系下
     sensor_msgs::Imu imuConverter(const sensor_msgs::Imu& imu_in)
     {
         sensor_msgs::Imu imu_out = imu_in;
